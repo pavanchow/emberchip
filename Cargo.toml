@@ -1,0 +1,20 @@
+[package]
+name = "emberchip"
+version = "0.1.0"
+edition = "2021"
+description = "A deterministic RTOS simulator on a small emulated microcontroller, in pure Rust std"
+license = "MIT"
+repository = "https://github.com/pavanchow/emberchip"
+readme = "README.md"
+
+[[bin]]
+name = "emberchip"
+path = "src/bin/emberchip.rs"
+
+[lib]
+name = "emberchip"
+path = "src/lib.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
