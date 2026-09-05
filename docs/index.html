@@ -2,11 +2,747 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>emberchip</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emberchip RTOS Playground</title>
+<style>
+  :root {
+    --bg: #fbfbfd;
+    --surface: #ffffff;
+    --surface-2: #f5f5f7;
+    --text: #1d1d1f;
+    --muted: #6e6e73;
+    --accent: #0071e3;
+    --border: #d2d2d7;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
+    --run: #0071e3;
+    --ready: rgba(0,113,227,.16);
+    --blocked: #ff9f0a;
+    --led-off: #3a3a3c;
+    --led-on: #ff453a;
+    --led-glow: rgba(255,69,58,.65);
+    --t0: #0071e3;
+    --t1: #34c759;
+    --t2: #ff9f0a;
+    --t3: #af52de;
+    --t4: #ff2d55;
+    --t5: #5ac8fa;
+    --radius: 14px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Dark override. Must come AFTER the base body rule and re-declare BOTH the
+     variables AND the body background, or dark Chrome shows dark text on white. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000;
+      --surface: #1c1c1e;
+      --surface-2: #2c2c2e;
+      --text: #f5f5f7;
+      --muted: #98989d;
+      --accent: #0a84ff;
+      --border: #38383a;
+      --shadow: 0 1px 3px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
+      --run: #0a84ff;
+      --ready: rgba(10,132,255,.22);
+      --blocked: #ff9f0a;
+      --led-off: #48484a;
+      --t0: #0a84ff;
+      --t1: #30d158;
+      --t2: #ff9f0a;
+      --t3: #bf5af2;
+      --t4: #ff375f;
+      --t5: #64d2ff;
+    }
+    body { background: var(--bg); color: var(--text); }
+  }
+
+  header {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 56px 24px 8px;
+    text-align: center;
+  }
+  header h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    letter-spacing: -.02em;
+    margin: 0 0 8px;
+    font-weight: 700;
+  }
+  header p.tag {
+    font-size: clamp(16px, 2.4vw, 21px);
+    color: var(--muted);
+    margin: 0 auto;
+    max-width: 640px;
+  }
+  .honest {
+    max-width: 720px;
+    margin: 18px auto 0;
+    font-size: 14px;
+    color: var(--muted);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+  }
+  .repo-link { color: var(--accent); text-decoration: none; }
+  .repo-link:hover { text-decoration: underline; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 22px;
+    margin: 20px 0;
+  }
+  .card h2 { margin: 0 0 4px; font-size: 22px; letter-spacing: -.01em; }
+  .card h3 { margin: 22px 0 8px; font-size: 16px; }
+  .card p.sub { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  button {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 500;
+    padding: 9px 18px;
+    border-radius: 980px;
+    border: 1px solid transparent;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: transform .06s ease, opacity .2s ease;
+  }
+  button:hover { opacity: .9; }
+  button:active { transform: scale(.97); }
+  button.secondary {
+    background: var(--surface-2);
+    color: var(--text);
+    border-color: var(--border);
+  }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+
+  .field { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+  select {
+    font-family: var(--sans);
+    font-size: 14px;
+    padding: 7px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .switch input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+  input[type=range] { accent-color: var(--accent); }
+
+  .readouts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 22px;
+    margin: 4px 0 14px;
+    font-size: 14px;
+  }
+  .readouts b { font-variant-numeric: tabular-nums; }
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 980px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+  }
+  .pill.good { color: var(--t1); }
+  .pill.warn { color: var(--blocked); }
+
+  /* Gantt */
+  .gantt-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+  .gantt { display: inline-block; min-width: 100%; padding: 10px 12px; }
+  .grow { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 10px; margin: 3px 0; }
+  .glabel { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .gcells { display: flex; gap: 2px; }
+  .cell {
+    width: 15px; height: 22px; border-radius: 3px;
+    background: transparent; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #fff;
+  }
+  .cell.ready { background: var(--ready); }
+  .cell.blocked { background: var(--blocked); opacity: .55; }
+  .cell.run { color: #fff; }
+  .axis { display: grid; grid-template-columns: 120px 1fr; gap: 10px; margin-bottom: 2px; }
+  .axis .ticks { display: flex; gap: 2px; }
+  .axis .tk { width: 15px; font-size: 9px; color: var(--muted); text-align: center; flex: none; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .box { width: 13px; height: 13px; border-radius: 3px; }
+
+  /* Board */
+  .board-row { display: grid; grid-template-columns: 220px 1fr; gap: 18px; margin-top: 16px; }
+  @media (max-width: 720px) { .board-row { grid-template-columns: 1fr; } }
+  .board {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+  }
+  .chip {
+    margin: 8px auto 12px;
+    width: 150px; height: 96px;
+    background: linear-gradient(145deg, #2c2c2e, #101012);
+    border-radius: 10px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 0 2px #000, var(--shadow);
+  }
+  .chip .name { color: #8e8e93; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; }
+  .chip::before, .chip::after {
+    content: ""; position: absolute; top: 12px; bottom: 12px; width: 6px;
+    background: repeating-linear-gradient(#5a5a5e, #5a5a5e 6px, transparent 6px, transparent 12px);
+  }
+  .chip::before { left: -6px; }
+  .chip::after { right: -6px; }
+  .led {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--led-off);
+    margin: 4px auto;
+    transition: background .08s ease, box-shadow .08s ease;
+  }
+  .led.on { background: var(--led-on); box-shadow: 0 0 4px 2px var(--led-glow), 0 0 14px 6px var(--led-glow); }
+  .led-label { font-size: 12px; color: var(--muted); }
+
+  .console {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+  }
+  .console .bar { padding: 8px 14px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--surface); }
+  .console pre {
+    margin: 0; padding: 12px 14px;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.55;
+    height: 190px; overflow-y: auto; white-space: pre-wrap;
+    color: var(--text);
+  }
+  .log .ev-inherit { color: var(--t3); font-weight: 600; }
+  .log .ev-preempt { color: var(--blocked); font-weight: 600; }
+  .log .ev-block { color: var(--t4); }
+  .log .ev-lock { color: var(--t1); }
+  .log .ev-muted { color: var(--muted); }
+
+  ol.tour { margin: 8px 0 0; padding-left: 22px; }
+  ol.tour li { margin: 7px 0; }
+  .howto code { font-family: var(--mono); background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+  .kbd { font-family: var(--mono); background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: 12px; }
+
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 24px 60px; }
+</style>
 </head>
 <body>
-<h1>emberchip</h1>
-<p>Site coming soon.</p>
-<p><a href="https://github.com/pavanchow/emberchip">View repository</a></p>
+<header>
+  <h1>Emberchip</h1>
+  <p class="tag">A deterministic RTOS, running in your browser. Watch a preemptive fixed-priority scheduler, a blinking LED, and priority inheritance defeat priority inversion.</p>
+  <div class="honest">
+    Honest framing: a real embedded OS runs as firmware on a microcontroller. This is a teaching-accurate simulator of one, reimplemented in plain JavaScript to mirror the Rust engine. It models the mechanisms, it is not firmware for a real chip.
+    <br>Source and the full engine: <a class="repo-link" href="https://github.com/pavanchow/emberchip">github.com/pavanchow/emberchip</a>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Live scheduler</h2>
+    <p class="sub">Pick a scenario, then step tick by tick or let it run. The Gantt shows which task holds the CPU each tick, who is merely ready, and who is blocked.</p>
+
+    <div class="controls">
+      <div class="field">
+        <label for="scenario">Scenario</label>
+        <select id="scenario">
+          <option value="demo">Blinky, sensor, and two mutex-sharing workers</option>
+          <option value="inversion">Priority inversion: low, medium, high</option>
+        </select>
+      </div>
+      <label class="switch" id="inheritWrap">
+        <input type="checkbox" id="inherit" checked>
+        Priority inheritance
+      </label>
+      <button id="stepBtn">Step</button>
+      <button id="runBtn" class="secondary">Run</button>
+      <button id="resetBtn" class="secondary">Reset</button>
+      <div class="field">
+        <label for="speed">Speed</label>
+        <input type="range" id="speed" min="1" max="20" value="6">
+      </div>
+    </div>
+
+    <div class="readouts">
+      <div>tick <b id="tickReadout">0</b></div>
+      <div>running <b id="runReadout">idle</b></div>
+      <div>deadline misses <b id="missReadout">0</b></div>
+      <div>invariant <span id="invReadout" class="pill good">holds</span></div>
+      <div id="blockingBox" style="display:none">high blocked <b id="blockReadout">0</b> ticks</div>
+    </div>
+
+    <div class="axis"><div></div><div class="ticks" id="axis"></div></div>
+    <div class="gantt-wrap">
+      <div class="gantt" id="gantt"></div>
+    </div>
+    <div class="legend">
+      <span><span class="box" style="background:var(--run)"></span> running</span>
+      <span><span class="box" style="background:var(--ready)"></span> ready</span>
+      <span><span class="box" style="background:var(--blocked);opacity:.55"></span> blocked</span>
+      <span>cell letter: <b>C</b> compute, <b>L</b> lock, <b>U</b> unlock, <b>G</b> gpio, <b>T</b> uart</span>
+    </div>
+
+    <div class="board-row">
+      <div class="board">
+        <div class="chip"><span class="name">EMBER-1</span></div>
+        <div class="led" id="led"></div>
+        <div class="led-label">GPIO0 &rarr; LED</div>
+      </div>
+      <div class="console">
+        <div class="bar">UART output</div>
+        <pre id="uart"></pre>
+      </div>
+    </div>
+
+    <h3>Event log</h3>
+    <div class="console log">
+      <div class="bar">kernel events</div>
+      <pre id="log"></pre>
+    </div>
+  </section>
+
+  <section class="card howto">
+    <h2>How to use this playground</h2>
+    <p class="sub">Every control, and what to look for.</p>
+    <ul>
+      <li><b>Scenario</b>: choose the task set. <i>Blinky</i> is a lively schedulable set with a blinking LED and UART chatter. <i>Priority inversion</i> is the classic three-task trap for watching priority inheritance.</li>
+      <li><b>Priority inheritance</b>: turns the mechanism on or off. It matters most in the inversion scenario. Toggling it resets the run.</li>
+      <li><b>Step</b> <span class="kbd">S</span>: advance exactly one tick. Best for watching the mechanism closely.</li>
+      <li><b>Run / Pause</b> <span class="kbd">Space</span>: play continuously at the chosen speed.</li>
+      <li><b>Reset</b> <span class="kbd">R</span>: rebuild the current scenario from tick zero.</li>
+      <li><b>Speed</b>: how many ticks per second when running.</li>
+    </ul>
+
+    <h3>Guided tour</h3>
+    <ol class="tour">
+      <li>Leave the scenario on <b>Priority inversion</b> with <b>inheritance on</b>. Press <b>Run</b>.</li>
+      <li>Watch <b>low</b> take the mutex (green <b>L</b>), then <b>high</b> arrive and block (amber cell, and a red BLOCK line in the log).</li>
+      <li>See the purple <b>INHERIT</b> line: low is boosted to high's priority, so <b>medium</b> cannot steal the CPU. Low finishes its short critical section and hands the mutex straight to high.</li>
+      <li>Note the <b>high blocked</b> readout. It is small, bounded by the critical section.</li>
+      <li>Now turn <b>inheritance off</b> and press Run again. This time <b>medium</b> preempts low while high waits, and the <b>high blocked</b> readout balloons. That is unbounded priority inversion.</li>
+      <li>Switch to <b>Blinky</b> and Run. Watch the LED toggle from the GPIO task, UART text stream, and higher-priority tasks preempt the workers, all with zero deadline misses.</li>
+    </ol>
+  </section>
+
+  <footer>
+    Emberchip is a teaching-accurate RTOS simulator. Built in pure Rust std, with this browser twin in plain JavaScript.<br>
+    <a class="repo-link" href="https://github.com/pavanchow/emberchip">github.com/pavanchow/emberchip</a>
+  </footer>
+</main>
+
+<script>
+"use strict";
+(function () {
+  const LED_PIN = 0;
+  const TASK_VARS = ["--t0","--t1","--t2","--t3","--t4","--t5"];
+
+  // Operation constructors, mirroring the Rust Op enum.
+  const Op = {
+    compute: (n) => ({k:"compute", n}),
+    delay:   (n) => ({k:"delay", n}),
+    gpioToggle: (p) => ({k:"gpioToggle", p}),
+    uart: (s) => ({k:"uart", s}),
+    lock: (m) => ({k:"lock", m}),
+    unlock: (m) => ({k:"unlock", m}),
+  };
+
+  function computeBudget(prog) {
+    return prog.reduce((a,o)=> a + (o.k==="compute" ? o.n : 0), 0);
+  }
+
+  function makeTask(id, name, prio, opts) {
+    return {
+      id, name, base: prio, eff: prio,
+      period: opts.period ?? null,
+      program: opts.program,
+      wcet: computeBudget(opts.program),
+      firstRelease: opts.firstRelease ?? 1,
+      state: "suspended",
+      pc: 0, computeRem: 0,
+      nextRelease: opts.firstRelease ?? 1,
+      wakeAt: 0, deadline: Infinity,
+      jobActive: false, missedCurrent: false,
+      held: [], blockedOn: null,
+      jobsDone: 0, misses: 0,
+    };
+  }
+
+  function scenarioDemo() {
+    return {
+      mutexes: 1,
+      tasks: [
+        makeTask(0,"blinky",6,{period:8, program:[Op.gpioToggle(LED_PIN), Op.uart("blink"), Op.compute(1)]}),
+        makeTask(1,"sensor",5,{period:10, program:[Op.uart("sample"), Op.compute(1)]}),
+        makeTask(2,"worker-a",4,{period:20, program:[Op.compute(1),Op.lock(0),Op.compute(3),Op.unlock(0),Op.compute(1)]}),
+        makeTask(3,"worker-b",3,{period:25, program:[Op.compute(1),Op.lock(0),Op.compute(2),Op.unlock(0)]}),
+      ],
+    };
+  }
+
+  function scenarioInversion() {
+    return {
+      mutexes: 1,
+      tasks: [
+        makeTask(0,"low",1,{program:[Op.lock(0),Op.compute(6),Op.unlock(0),Op.compute(1)], firstRelease:1}),
+        makeTask(1,"mid",5,{program:[Op.compute(12)], firstRelease:3}),
+        makeTask(2,"high",9,{program:[Op.compute(1),Op.lock(0),Op.compute(2),Op.unlock(0)], firstRelease:3}),
+      ],
+    };
+  }
+
+  class Sim {
+    constructor(kind, inherit) {
+      this.kind = kind;
+      this.inherit = inherit;
+      const def = kind === "inversion" ? scenarioInversion() : scenarioDemo();
+      this.tasks = def.tasks;
+      this.mutexes = Array.from({length:def.mutexes}, () => ({owner:null, waiters:[]}));
+      this.now = 0;
+      this.running = null;
+      this.pins = [false,false,false,false,false,false,false,false];
+      this.uart = "";
+      this.events = [];        // {tick, type, text, cls}
+      this.history = [];       // per task: array of {state, mark}
+      this.tasks.forEach(()=> this.history.push([]));
+      this.invariantOk = true;
+      this.highBlockStart = null;
+      this.highBlockTicks = 0;
+    }
+
+    effOf(id){ return this.tasks[id].eff; }
+
+    log(tick, type, text, cls){ this.events.push({tick, type, text, cls: cls||""}); }
+
+    pick() {
+      let best = null;
+      for (const t of this.tasks) {
+        if (t.state !== "ready" && t.state !== "running") continue;
+        if (best === null) { best = t.id; continue; }
+        const bp = this.tasks[best].eff;
+        if (t.eff > bp || (t.eff === bp && t.id < best)) best = t.id;
+      }
+      return best;
+    }
+
+    onTick() {
+      const now = this.now;
+      for (const t of this.tasks) {
+        if (!t.jobActive && t.nextRelease !== Infinity && now >= t.nextRelease) {
+          t.state = "ready"; t.jobActive = true; t.pc = 0; t.computeRem = 0;
+          t.blockedOn = null; t.missedCurrent = false;
+          if (t.period !== null) { t.deadline = now + t.period; t.nextRelease += t.period; }
+          else { t.deadline = Infinity; t.nextRelease = Infinity; }
+          this.log(now, "release", "release " + t.name, "ev-muted");
+        }
+      }
+      for (const t of this.tasks) {
+        if (t.state === "blocked" && t.blockedOn === "sleep" && now >= t.wakeAt) {
+          t.state = "ready"; t.blockedOn = null;
+        }
+      }
+      for (const t of this.tasks) {
+        if (t.jobActive && !t.missedCurrent && t.deadline !== Infinity && now > t.deadline) {
+          t.misses++; t.missedCurrent = true;
+          this.log(now, "miss", "DEADLINE MISS " + t.name, "ev-block");
+        }
+      }
+    }
+
+    applyInheritance(blockedTask) {
+      let current = blockedTask;
+      while (true) {
+        const t = this.tasks[current];
+        if (!(typeof t.blockedOn === "object" && t.blockedOn && t.blockedOn.mutex !== undefined)) break;
+        const mid = t.blockedOn.mutex;
+        const owner = this.mutexes[mid].owner;
+        if (owner === null) break;
+        const want = this.tasks[current].eff;
+        if (want > this.tasks[owner].eff) {
+          this.tasks[owner].eff = want;
+          this.log(this.now, "inherit", "INHERIT " + this.tasks[owner].name + " boosted to prio " + want + " (waiter " + this.tasks[current].name + ")", "ev-inherit");
+          current = owner;
+        } else break;
+      }
+    }
+
+    recomputeHolder(holder) {
+      let p = this.tasks[holder].base;
+      for (const m of this.tasks[holder].held) {
+        for (const w of this.mutexes[m].waiters) p = Math.max(p, this.tasks[w].eff);
+      }
+      if (p !== this.tasks[holder].eff) {
+        this.tasks[holder].eff = p;
+        this.log(this.now, "restore", "restore " + this.tasks[holder].name + " to prio " + p, "ev-muted");
+      }
+    }
+
+    grantMutex(mid, task) {
+      const m = this.mutexes[mid];
+      if (m.waiters.length === 0) { m.owner = null; return; }
+      let best = 0;
+      for (let i=0;i<m.waiters.length;i++){
+        const w = m.waiters[i], cur = m.waiters[best];
+        if (this.effOf(w) > this.effOf(cur) || (this.effOf(w)===this.effOf(cur) && w<cur)) best = i;
+      }
+      const next = m.waiters.splice(best,1)[0];
+      m.owner = next;
+      this.tasks[next].held.push(mid);
+      this.tasks[next].state = "ready";
+      this.tasks[next].blockedOn = null;
+      this.tasks[next].pc += 1;
+      this.log(this.now, "lock", "lock m" + mid + " by " + this.tasks[next].name, "ev-lock");
+      if (next === 2 && this.highBlockStart !== null) {
+        this.highBlockTicks = this.now - this.highBlockStart; this.highBlockStart = null;
+      }
+      if (this.inherit) this.recomputeHolder(next);
+    }
+
+    runQuantum(tid) {
+      let mark = "";
+      while (true) {
+        const t = this.tasks[tid];
+        const op = t.program[t.pc];
+        if (op === undefined) { this.completeJob(tid); return mark; }
+        if (op.k === "compute") {
+          if (t.computeRem === 0) t.computeRem = op.n;
+          if (t.computeRem === 0) { t.pc++; continue; }
+          t.computeRem--; mark = "C";
+          if (t.computeRem === 0) {
+            t.pc++;
+            if (t.pc >= t.program.length) this.completeJob(tid);
+          }
+          return mark;
+        }
+        if (op.k === "delay") {
+          t.pc++;
+          if (op.n === 0) continue;
+          t.state = "blocked"; t.blockedOn = "sleep"; t.wakeAt = this.now + op.n;
+          this.running = null;
+          this.log(this.now, "sleep", "sleep " + t.name + " until " + t.wakeAt, "ev-muted");
+          return mark || "S";
+        }
+        if (op.k === "gpioToggle") {
+          this.pins[op.p] = !this.pins[op.p]; t.pc++;
+          this.log(this.now, "gpio", "gpio" + op.p + "=" + (this.pins[op.p]?"HIGH":"LOW") + " by " + t.name, "ev-muted");
+          mark = "G"; continue;
+        }
+        if (op.k === "uart") {
+          this.uart += op.s + "\n"; t.pc++;
+          this.log(this.now, "uart", 'uart "' + op.s + '" by ' + t.name, "ev-muted");
+          mark = mark || "T"; continue;
+        }
+        if (op.k === "lock") {
+          const m = this.mutexes[op.m];
+          if (m.owner === null) {
+            m.owner = tid; t.held.push(op.m); t.pc++;
+            this.log(this.now, "lock", "lock m" + op.m + " by " + t.name, "ev-lock");
+            mark = mark || "L"; continue;
+          } else {
+            m.waiters.push(tid);
+            t.state = "blocked"; t.blockedOn = {mutex: op.m};
+            this.running = null;
+            this.log(this.now, "block", "BLOCK " + t.name + " on m" + op.m + " held by " + this.tasks[m.owner].name, "ev-block");
+            if (tid === 2 && this.highBlockStart === null) this.highBlockStart = this.now;
+            if (this.inherit) this.applyInheritance(tid);
+            return mark;
+          }
+        }
+        if (op.k === "unlock") {
+          t.held = t.held.filter(x => x !== op.m);
+          t.pc++;
+          this.log(this.now, "unlock", "unlock m" + op.m + " by " + t.name, "ev-muted");
+          if (this.inherit) this.recomputeHolder(tid);
+          this.grantMutex(op.m, tid);
+          mark = mark || "U"; continue;
+        }
+        t.pc++; // unknown op guard
+      }
+    }
+
+    completeJob(tid) {
+      const t = this.tasks[tid];
+      t.jobsDone++; t.jobActive = false; t.pc = 0; t.computeRem = 0;
+      if (t.period !== null) { t.state = "blocked"; t.blockedOn = "period"; }
+      else { t.state = "suspended"; t.nextRelease = Infinity; }
+      this.running = null;
+      this.log(this.now, "done", "done " + t.name, "ev-muted");
+    }
+
+    step() {
+      this.now++;
+      this.onTick();
+
+      const readyIds = this.tasks.filter(t => t.state==="ready"||t.state==="running").map(t=>t.id);
+      const chosen = this.pick();
+
+      let mark = "";
+      if (chosen === null) {
+        this.running = null;
+      } else {
+        const maxEff = Math.max(...readyIds.map(i => this.tasks[i].eff));
+        if (this.tasks[chosen].eff < maxEff) this.invariantOk = false;
+        if (this.running !== null && this.running !== chosen && this.tasks[this.running].state === "running") {
+          this.tasks[this.running].state = "ready";
+          this.log(this.now, "preempt", "PREEMPT " + this.tasks[this.running].name + " by " + this.tasks[chosen].name, "ev-preempt");
+        }
+        this.running = chosen;
+        this.tasks[chosen].state = "running";
+        mark = this.runQuantum(chosen);
+      }
+
+      // Record a Gantt column for every task.
+      for (const t of this.tasks) {
+        let cellState;
+        if (this.running === t.id) cellState = "run";
+        else if (t.state === "blocked" && t.jobActive) cellState = "blocked";
+        else if (t.state === "ready") cellState = "ready";
+        else cellState = "idle";
+        this.history[t.id].push({ state: cellState, mark: (this.running === t.id ? mark : "") });
+      }
+    }
+  }
+
+  // ---- rendering ----
+  const el = (id) => document.getElementById(id);
+  const scenarioSel = el("scenario");
+  const inheritCb = el("inherit");
+  const inheritWrap = el("inheritWrap");
+  const gantt = el("gantt");
+  const axis = el("axis");
+  const led = el("led");
+  const uartEl = el("uart");
+  const logEl = el("log");
+
+  let sim = null;
+  let timer = null;
+
+  function rootColor(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+  function build() {
+    sim = new Sim(scenarioSel.value, inheritCb.checked);
+    el("blockingBox").style.display = scenarioSel.value === "inversion" ? "" : "none";
+    render();
+  }
+
+  function render() {
+    // axis
+    const cols = sim.history[0] ? sim.history[0].length : 0;
+    let axisHtml = "";
+    for (let i=0;i<cols;i++) axisHtml += '<div class="tk">' + ((i+1)%5===0 ? (i+1) : "") + '</div>';
+    axis.innerHTML = axisHtml;
+
+    // rows
+    let html = "";
+    sim.tasks.forEach((t, idx) => {
+      const color = "var(" + TASK_VARS[idx % TASK_VARS.length] + ")";
+      let cells = "";
+      for (const c of sim.history[t.id]) {
+        if (c.state === "run") cells += '<div class="cell run" style="background:'+color+'">'+c.mark+'</div>';
+        else if (c.state === "ready") cells += '<div class="cell ready"></div>';
+        else if (c.state === "blocked") cells += '<div class="cell blocked"></div>';
+        else cells += '<div class="cell"></div>';
+      }
+      html += '<div class="grow"><div class="glabel"><span class="swatch" style="background:'+color+'"></span>'
+        + t.name + ' <span class="ev-muted" style="font-weight:400">p'+t.base+(t.eff!==t.base?'&rarr;'+t.eff:'')+'</span></div>'
+        + '<div class="gcells">'+cells+'</div></div>';
+    });
+    gantt.innerHTML = html;
+
+    // scroll to newest
+    const wrap = gantt.parentElement;
+    wrap.scrollLeft = wrap.scrollWidth;
+
+    // readouts
+    el("tickReadout").textContent = sim.now;
+    el("runReadout").textContent = sim.running === null ? "idle" : sim.tasks[sim.running].name;
+    const misses = sim.tasks.reduce((a,t)=>a+t.misses,0);
+    el("missReadout").textContent = misses;
+    const inv = el("invReadout");
+    inv.textContent = sim.invariantOk ? "holds" : "violated";
+    inv.className = "pill " + (sim.invariantOk ? "good" : "warn");
+    el("blockReadout").textContent = sim.highBlockStart !== null ? (sim.now - sim.highBlockStart) + "+" : sim.highBlockTicks;
+
+    // board
+    led.classList.toggle("on", sim.pins[LED_PIN]);
+    uartEl.textContent = sim.uart;
+    uartEl.scrollTop = uartEl.scrollHeight;
+
+    // log (last 60 events)
+    const recent = sim.events.slice(-80);
+    logEl.innerHTML = recent.map(e =>
+      '<span class="ev-muted">t' + String(e.tick).padStart(3," ") + '</span>  <span class="'+e.cls+'">' + e.text + '</span>'
+    ).join("\n");
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function stepOnce() { sim.step(); render(); }
+
+  function toggleRun() {
+    if (timer) { stopRun(); return; }
+    el("runBtn").textContent = "Pause";
+    const fps = parseInt(el("speed").value, 10);
+    timer = setInterval(() => {
+      sim.step();
+      render();
+      if (sim.now > 400) stopRun();
+    }, Math.max(40, 1000 / fps));
+  }
+  function stopRun() {
+    if (timer) { clearInterval(timer); timer = null; }
+    el("runBtn").textContent = "Run";
+  }
+
+  el("stepBtn").addEventListener("click", () => { stopRun(); stepOnce(); });
+  el("runBtn").addEventListener("click", toggleRun);
+  el("resetBtn").addEventListener("click", () => { stopRun(); build(); });
+  scenarioSel.addEventListener("change", () => { stopRun(); build(); });
+  inheritCb.addEventListener("change", () => { stopRun(); build(); });
+  el("speed").addEventListener("input", () => { if (timer) { stopRun(); toggleRun(); } });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "SELECT" || e.target.tagName === "INPUT") return;
+    if (e.key === "s" || e.key === "S") { stopRun(); stepOnce(); }
+    else if (e.key === " ") { e.preventDefault(); toggleRun(); }
+    else if (e.key === "r" || e.key === "R") { stopRun(); build(); }
+  });
+
+  build();
+})();
+</script>
 </body>
 </html>
