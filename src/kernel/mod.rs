@@ -261,7 +261,13 @@ impl Kernel {
 
         for i in 0..self.tasks.len() {
             let t = &self.tasks[i];
-            if t.job_active && !t.missed_current && t.deadline != u64::MAX && now > t.deadline {
+            // A job released at tick r with period p owns ticks r..r+p-1, exactly
+            // p ticks, because its successor is due at r+p. If it is still active
+            // when now reaches its deadline (r+p) it did not finish inside its
+            // period, so that is a miss. Using `>` here would grant one extra
+            // tick, letting an over-demanded job overlap the next release and
+            // hiding a real deadline miss.
+            if t.job_active && !t.missed_current && t.deadline != u64::MAX && now >= t.deadline {
                 let deadline = t.deadline;
                 let t = &mut self.tasks[i];
                 t.deadlines_missed += 1;
