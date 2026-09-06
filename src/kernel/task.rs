@@ -122,6 +122,7 @@ impl Task {
 
     /// A periodic task: released every `period` ticks with an implicit deadline
     /// equal to the period.
+    #[must_use]
     pub fn periodic(mut self, period: u64, program: Vec<Op>) -> Self {
         self.period = Some(period);
         self.wcet = compute_budget(&program);
@@ -130,6 +131,7 @@ impl Task {
     }
 
     /// A one-shot task, released once at startup.
+    #[must_use]
     pub fn oneshot(mut self, program: Vec<Op>) -> Self {
         self.period = None;
         self.wcet = compute_budget(&program);
@@ -138,6 +140,7 @@ impl Task {
     }
 
     /// With a fixed-size stack, in bytes.
+    #[must_use]
     pub fn with_stack(mut self, bytes: usize) -> Self {
         self.stack = vec![0; bytes];
         self

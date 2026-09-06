@@ -11,6 +11,22 @@
 //!
 //! See `DESIGN.md` for the model and `README.md` for the honest framing.
 
+#![warn(clippy::pedantic)]
+// Priorities are u8, ids and sizes are usize, and utilization is f64 by design,
+// so the domain casts are deliberate. The must-use and doc lints add noise
+// without value for a simulator of this size.
+#![allow(
+    clippy::must_use_candidate,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    clippy::too_many_lines,
+    clippy::missing_panics_doc,
+    clippy::doc_markdown,
+    clippy::format_push_string
+)]
+
 pub mod kernel;
 pub mod mcu;
 pub mod rng;

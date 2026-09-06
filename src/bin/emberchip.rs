@@ -10,11 +10,22 @@
 //!   --ticks N         Number of ticks (demo and inversion have sensible defaults).
 //!   --quiet           Print only the summary, not the full timeline.
 
+#![warn(clippy::pedantic)]
+#![allow(
+    clippy::must_use_candidate,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    clippy::too_many_lines,
+    clippy::doc_markdown
+)]
+
 use emberchip::{timeline, workload, Config, Rng};
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let cmd = args.first().map(String::as_str).unwrap_or("demo");
+    let cmd = args.first().map_or("demo", String::as_str);
 
     let mut seed = 1u64;
     let mut ticks: Option<u64> = None;
@@ -44,7 +55,7 @@ fn main() {
             run_random(seed, ticks.or(positional).unwrap_or(200), quiet);
         }
         "inversion" => {
-            let mode = args.get(1).map(String::as_str).unwrap_or("on");
+            let mode = args.get(1).map_or("on", String::as_str);
             let inherit = mode != "off";
             run_inversion(seed, ticks.unwrap_or(30), inherit, quiet);
         }

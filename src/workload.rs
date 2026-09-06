@@ -400,7 +400,7 @@ mod tests {
         for _ in 0..50 {
             let n = (rng.range(2, 6)) as usize;
             let tasks = random_schedulable_set(&mut rng, n);
-            let util: f64 = tasks.iter().map(|t| t.utilization()).sum();
+            let util: f64 = tasks.iter().map(Task::utilization).sum();
             assert!(util <= rm_bound(tasks.len()) + 1e-9, "util {util} over bound");
         }
     }

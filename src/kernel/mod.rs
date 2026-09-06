@@ -233,15 +233,12 @@ impl Kernel {
                 t.compute_remaining = 0;
                 t.blocked_on = None;
                 t.missed_current = false;
-                match period {
-                    Some(p) => {
-                        t.deadline = now + p;
-                        t.next_release += p;
-                    }
-                    None => {
-                        t.deadline = u64::MAX;
-                        t.next_release = u64::MAX;
-                    }
+                if let Some(p) = period {
+                    t.deadline = now + p;
+                    t.next_release += p;
+                } else {
+                    t.deadline = u64::MAX;
+                    t.next_release = u64::MAX;
                 }
                 self.log.push(Event::Release { task: i });
             }
@@ -304,12 +301,9 @@ impl Kernel {
     fn run_quantum(&mut self, tid: usize) {
         loop {
             let op = self.tasks[tid].program.get(self.tasks[tid].pc).cloned();
-            let op = match op {
-                Some(op) => op,
-                None => {
-                    self.complete_job(tid);
-                    return;
-                }
+            let Some(op) = op else {
+                self.complete_job(tid);
+                return;
             };
 
             match op {
@@ -475,8 +469,8 @@ impl Kernel {
                         return;
                     }
                 }
-                Op::QueueRecv(q) => match self.queues[q].try_recv() {
-                    Some(value) => {
+                Op::QueueRecv(q) => {
+                    if let Some(value) = self.queues[q].try_recv() {
                         self.tasks[tid].pc += 1;
                         self.log.push(Event::QueueRecv {
                             task: tid,
@@ -488,8 +482,7 @@ impl Kernel {
                             self.tasks[s].state = TaskState::Ready;
                             self.tasks[s].blocked_on = None;
                         }
-                    }
-                    None => {
+                    } else {
                         self.queues[q].recv_waiters.push(tid);
                         let t = &mut self.tasks[tid];
                         t.state = TaskState::Blocked;
@@ -501,7 +494,7 @@ impl Kernel {
                         });
                         return;
                     }
-                },
+                }
             }
         }
     }
@@ -530,9 +523,8 @@ impl Kernel {
     fn apply_inheritance(&mut self, blocked_task: usize) {
         let mut current = blocked_task;
         while let Some(BlockReason::Mutex(mutex_id)) = self.tasks[current].blocked_on {
-            let owner = match self.mutexes[mutex_id].owner {
-                Some(o) => o,
-                None => break,
+            let Some(owner) = self.mutexes[mutex_id].owner else {
+                break;
             };
             let want = self.tasks[current].eff_priority;
             if want > self.tasks[owner].eff_priority {

@@ -31,6 +31,17 @@
 //!   EMBERCHIP_STRESS_SEED     base seed (default 1)
 //!   EMBERCHIP_STRESS_CHUNK    log flush chunk in ticks (default 4_096)
 
+#![warn(clippy::pedantic)]
+#![allow(
+    clippy::must_use_candidate,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap,
+    clippy::too_many_lines,
+    clippy::doc_markdown
+)]
+
 use emberchip::kernel::BlockReason;
 use emberchip::{Config, Event, Kernel, Op, Task};
 use std::collections::hash_map::DefaultHasher;
@@ -63,7 +74,7 @@ fn run_chunked(k: &mut Kernel, horizon: u64, mut fold: impl FnMut(&mut Kernel)) 
         fold(k);
         k.log.clear();
         k.records.clear();
-        if done % (chunk * 64) == 0 {
+        if done.is_multiple_of(chunk * 64) {
             eprintln!(
                 "  progress {done}/{horizon} ticks, {:.1}s elapsed",
                 started.elapsed().as_secs_f64()
@@ -307,7 +318,7 @@ impl HerdFold {
         // the semaphore. A blocked waiter holds nothing, it is a pending
         // consumer, so it stays out of the identity.
         let produced = self.signals;
-        let accounted = self.waits + k.semaphores[self.sem].count() as u64;
+        let accounted = self.waits + u64::from(k.semaphores[self.sem].count());
         assert_eq!(
             produced, accounted,
             "herd: units lost or invented, produced {produced} vs accounted {accounted}"
@@ -652,7 +663,7 @@ fn scenario_deadlock(ticks: u64) {
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let cmd = args.first().map(String::as_str).unwrap_or("all");
+    let cmd = args.first().map_or("all", String::as_str);
     let ticks = env_u64("EMBERCHIP_STRESS_TICKS", 200_000);
     let n_tasks = env_usize("EMBERCHIP_STRESS_TASKS", 300);
     let reps = env_usize("EMBERCHIP_STRESS_REPS", 400);

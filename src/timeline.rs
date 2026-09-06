@@ -8,7 +8,7 @@ use crate::kernel::{Event, Kernel};
 /// Render the full event log as an indented, tick-by-tick timeline.
 pub fn render(kernel: &Kernel) -> String {
     let mut out = String::new();
-    let name = |id: usize| kernel.tasks.get(id).map(|t| t.name.as_str()).unwrap_or("?");
+    let name = |id: usize| kernel.tasks.get(id).map_or("?", |t| t.name.as_str());
     for ev in &kernel.log {
         match ev {
             Event::Tick(t) => {
@@ -128,8 +128,7 @@ pub fn summary(kernel: &Kernel) -> String {
     for t in &kernel.tasks {
         let period = t
             .period
-            .map(|p| p.to_string())
-            .unwrap_or_else(|| "once".to_string());
+            .map_or_else(|| "once".to_string(), |p| p.to_string());
         out.push_str(&format!(
             "  {:>2}  {:<10}  {:>4}  {:>6}  {:>4}  {:>4}  {:>4}  {:>6}  {:>4}\n",
             t.id,
