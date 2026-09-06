@@ -99,3 +99,73 @@ fn no_boost_when_inheritance_disabled() {
     let boosted = k.log.iter().any(|e| matches!(e, Event::Inherit { .. }));
     assert!(!boosted, "no inheritance events when the feature is off");
 }
+
+// ----- nested (transitive) inheritance -----
+
+/// The two nested critical sections in the transitive scenario: low holds m2
+/// for 6 ticks, midh holds m2 for 2 ticks. High cannot beat the sum of these.
+const NESTED_CHAIN: u64 = 6 + 2;
+
+fn nested_blocking_with(inherit: bool) -> u64 {
+    let cfg = Config {
+        seed: 1,
+        priority_inheritance: inherit,
+        ..Config::default()
+    };
+    let mut k = workload::nested_inversion(cfg);
+    k.run(80);
+    workload::blocking_ticks(&k, 2)
+}
+
+#[test]
+fn nested_inheritance_propagates_down_the_chain() {
+    // high blocks on midh (holds m1), midh blocks on low (holds m2). The boost
+    // from high must reach BOTH midh and, transitively, low.
+    let cfg = Config {
+        seed: 1,
+        priority_inheritance: true,
+        ..Config::default()
+    };
+    let mut k = workload::nested_inversion(cfg);
+    k.run(80);
+
+    let midh_boosted = k.log.iter().any(|e| {
+        matches!(e, Event::Inherit { holder: 1, boosted_to: 9, .. })
+    });
+    let low_boosted = k.log.iter().any(|e| {
+        matches!(e, Event::Inherit { holder: 0, boosted_to: 9, .. })
+    });
+    assert!(midh_boosted, "the direct holder midh must be boosted to 9");
+    assert!(
+        low_boosted,
+        "the transitive holder low (two levels down) must be boosted to 9"
+    );
+    // Both boosts must be restored by the end.
+    assert!(k.tasks[0].eff_priority == k.tasks[0].base_priority);
+    assert!(k.tasks[1].eff_priority == k.tasks[1].base_priority);
+}
+
+#[test]
+fn nested_inheritance_bounds_high_blocking() {
+    let with = nested_blocking_with(true);
+    assert!(with != u64::MAX, "high must acquire the mutex under inheritance");
+    // Non-vacuous: high really did block.
+    assert!(with > 0, "high never blocked, the nested scenario is vacuous");
+    // Bounded by the two nested critical sections plus scheduling slack.
+    assert!(
+        with <= NESTED_CHAIN + 4,
+        "nested inheritance: high blocked {with}, above the chain bound {}",
+        NESTED_CHAIN + 4
+    );
+}
+
+#[test]
+fn nested_without_inheritance_is_worse() {
+    let with = nested_blocking_with(true);
+    let without = nested_blocking_with(false);
+    assert!(
+        without >= with + 5,
+        "without inheritance the noise task should stretch high's blocking well \
+         beyond the chain: with={with} without={without}"
+    );
+}

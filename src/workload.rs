@@ -203,18 +203,19 @@ pub fn priority_inversion(config: Config) -> Kernel {
     k
 }
 
-/// Measure how long `high` (task id 2) is blocked between the tick it first
-/// tries to take the mutex and the tick it acquires it, in the inversion
-/// scenario. This is the number the inheritance gate compares.
-pub fn high_blocking_ticks(kernel: &Kernel) -> u64 {
+/// Measure how long a task is blocked between the tick it first tries to take a
+/// mutex and the tick it acquires it. `u64::MAX` if it blocked and never
+/// acquired within the run, `0` if it never blocked. This is the number the
+/// inheritance gates compare.
+pub fn blocking_ticks(kernel: &Kernel, task_id: usize) -> u64 {
     use crate::kernel::Event;
     let mut blocked_at: Option<u64> = None;
     let mut tick = 0u64;
     for ev in &kernel.log {
         match ev {
             Event::Tick(t) => tick = *t,
-            Event::BlockOnMutex { task: 2, .. } => blocked_at = Some(tick),
-            Event::Lock { task: 2, .. } => {
+            Event::BlockOnMutex { task, .. } if *task == task_id => blocked_at = Some(tick),
+            Event::Lock { task, .. } if *task == task_id => {
                 if let Some(start) = blocked_at.take() {
                     return tick - start;
                 }
@@ -227,6 +228,114 @@ pub fn high_blocking_ticks(kernel: &Kernel) -> u64 {
         return u64::MAX;
     }
     0
+}
+
+/// Measure how long `high` (task id 2) is blocked in the flat inversion
+/// scenario. Kept for the inheritance gate.
+pub fn high_blocking_ticks(kernel: &Kernel) -> u64 {
+    blocking_ticks(kernel, 2)
+}
+
+/// A nested (transitive) priority-inversion scenario, used to prove inheritance
+/// propagates down a chain of held mutexes, not just one level.
+///
+/// Two mutexes, `m1` and `m2`, and four one-shot tasks:
+/// - `low` (priority 1) takes `m2` and holds it across a long critical section.
+/// - `midh` (priority 5) takes `m1`, then tries to take `m2`, so it blocks on
+///   `low` and holds `m1` while blocked.
+/// - `high` (priority 9) tries to take `m1`, so it blocks on `midh`.
+/// - `noise` (priority 6) is pure compute and touches no mutex.
+///
+/// With inheritance the block by `high` walks the chain and boosts `midh` to 9,
+/// then `low` to 9 as well (transitive), so `noise` cannot run and `high` waits
+/// only for the two nested critical sections. Without inheritance `noise`
+/// preempts the unboosted `low`, stretching the chain and the blocking of
+/// `high`. The `high` task is id 2 so `high_blocking_ticks` reads it directly.
+pub fn nested_inversion(config: Config) -> Kernel {
+    let mut k = Kernel::new(config);
+    let m1 = k.add_mutex();
+    let m2 = k.add_mutex();
+
+    // low: grabs m2 first, long critical section.
+    k.add_task(Task::new(0, "low", 1).oneshot(vec![
+        Op::Lock(m2),
+        Op::Compute(6),
+        Op::Unlock(m2),
+    ]));
+    // midh: grabs m1, then needs m2 which low holds.
+    k.add_task(Task::new(1, "midh", 5).oneshot(vec![
+        Op::Lock(m1),
+        Op::Compute(1),
+        Op::Lock(m2),
+        Op::Compute(2),
+        Op::Unlock(m2),
+        Op::Unlock(m1),
+    ]));
+    // high (id 2): needs m1 which midh holds.
+    k.add_task(Task::new(2, "high", 9).oneshot(vec![
+        Op::Compute(1),
+        Op::Lock(m1),
+        Op::Compute(1),
+        Op::Unlock(m1),
+    ]));
+    // noise: mid priority pure compute, the preemption pressure on low.
+    k.add_task(Task::new(3, "noise", 6).oneshot(vec![Op::Compute(10)]));
+
+    // Phasing: low first, midh next, then high and noise arrive to contend.
+    k.tasks[0].next_release = 1;
+    k.tasks[1].next_release = 2;
+    k.tasks[2].next_release = 4;
+    k.tasks[3].next_release = 4;
+    k
+}
+
+/// A many-task contention scenario used to check mutual exclusion and the
+/// effective-priority scheduling invariant under real contention.
+///
+/// A single low-priority `holder` (id 0) is released first and alone, so it
+/// grabs the mutex and enters a long critical section before anything higher is
+/// ready. Then `n` workers at mixed and deliberately equal priorities are
+/// released together, several of which also take the mutex, and a top task
+/// (highest priority) is released mid critical-section so it blocks on the low
+/// holder and triggers inheritance. Equal-priority blocks exercise the
+/// tie-breaking in both the scheduler and the mutex waiter queue. The set is
+/// kept schedulable so every task makes progress.
+pub fn contended_set(config: Config, n: usize) -> Kernel {
+    let mut k = Kernel::new(config);
+    let m = k.add_mutex();
+    let n = n.clamp(4, 40);
+    let period = (n as u64) * 10;
+
+    // The low holder: released alone at tick 1, long critical section.
+    k.add_task(Task::new(0, "holder", 1).periodic(
+        period,
+        vec![Op::Lock(m), Op::Compute(4), Op::Unlock(m), Op::Compute(1)],
+    ));
+
+    for i in 0..n {
+        // Equal priorities in blocks of four, so ties are exercised heavily.
+        let prio = 3 + (i / 4) as u8 % 5;
+        // Every third worker also contends for the mutex.
+        let program = if i % 3 == 0 {
+            vec![Op::Compute(1), Op::Lock(m), Op::Compute(2), Op::Unlock(m)]
+        } else {
+            vec![Op::Compute(2)]
+        };
+        k.add_task(Task::new(1 + i, format!("w{i}"), prio).periodic(period, program));
+    }
+    // One unambiguous top task also sharing the mutex.
+    let top = 1 + n;
+    k.add_task(Task::new(top, "top", 9).periodic(
+        period / 2,
+        vec![Op::Compute(1), Op::Lock(m), Op::Compute(1), Op::Unlock(m)],
+    ));
+
+    // Phasing: the holder is alone at tick 1 and takes the mutex, the crowd and
+    // the top task arrive a few ticks later, mid critical-section.
+    for t in k.tasks.iter_mut().skip(1) {
+        t.next_release = 3;
+    }
+    k
 }
 
 #[cfg(test)]
