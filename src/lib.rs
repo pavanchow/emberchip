@@ -14,6 +14,7 @@
 pub mod kernel;
 pub mod mcu;
 pub mod rng;
+pub mod schedulability;
 pub mod timeline;
 pub mod workload;
 
@@ -21,6 +22,7 @@ pub use kernel::{
     BlockReason, Config, Event, Kernel, Mutex, Op, Priority, Queue, ReadyEntry, Semaphore, Task,
     TaskState, TickRecord,
 };
+pub use schedulability::{analyze, Analysis};
 pub use mcu::Mcu;
 pub use rng::Rng;
 

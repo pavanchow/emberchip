@@ -48,6 +48,7 @@ fn main() {
             let inherit = mode != "off";
             run_inversion(seed, ticks.unwrap_or(30), inherit, quiet);
         }
+        "analyze" => run_analyze(seed),
         "help" | "--help" | "-h" => print_help(),
         other => {
             eprintln!("unknown command: {other}\n");
@@ -126,6 +127,39 @@ fn run_inversion(seed: u64, ticks: u64, inherit: bool, quiet: bool) {
     }
 }
 
+fn run_analyze(seed: u64) {
+    use emberchip::schedulability;
+    let mut rng = Rng::new(seed);
+    let n = rng.range(2, 6) as usize;
+    let tasks = workload::random_rm_set(&mut rng, n);
+    header(&format!("rate-monotonic analysis, seed {seed}, {n} tasks"));
+    let analysis = emberchip::analyze(&tasks);
+    print!("{}", schedulability::report(&tasks, &analysis));
+
+    // Confirm the prediction against the simulator: the analysis is exact for a
+    // synchronous set, so the run must agree.
+    let cfg = Config {
+        seed,
+        ..Config::default()
+    };
+    let mut k = emberchip::Kernel::new(cfg);
+    for t in &tasks {
+        k.add_task(t.clone());
+    }
+    let horizon = workload::hyperperiod(&k.tasks, 5_000).max(1_000);
+    k.run(horizon);
+    let misses = k.total_deadline_misses();
+    let sim = misses == 0;
+    println!(
+        "simulated {horizon} ticks: {misses} deadline misses ({})",
+        if sim { "met all deadlines" } else { "missed" }
+    );
+    println!(
+        "analysis vs simulation: {}",
+        if analysis.schedulable == sim { "AGREE" } else { "DISAGREE" }
+    );
+}
+
 fn print_help() {
     println!(
         "emberchip: deterministic RTOS simulator\n\
@@ -134,6 +168,7 @@ fn print_help() {
          \x20 emberchip demo [--seed N] [--ticks N] [--quiet]\n\
          \x20 emberchip run [TICKS] [--seed N] [--quiet]\n\
          \x20 emberchip inversion [on|off] [--seed N] [--ticks N] [--quiet]\n\
+         \x20 emberchip analyze [--seed N]\n\
          \n\
          EMBERCHIP_FUZZ_OPS controls the randomized test budget (see cargo test)."
     );

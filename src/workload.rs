@@ -99,6 +99,51 @@ pub fn random_schedulable_set(rng: &mut Rng, n: usize) -> Vec<Task> {
     }
 }
 
+/// Build a random periodic task set with distinct periods and rate-monotonic
+/// priorities, but WCETs drawn wide enough that the set may be schedulable or
+/// overloaded. Used to confirm response-time analysis against the simulator
+/// across both outcomes. Deterministic in `rng`.
+pub fn random_rm_set(rng: &mut Rng, n: usize) -> Vec<Task> {
+    let n = n.clamp(2, 6);
+    loop {
+        let mut periods: Vec<u64> = Vec::new();
+        let mut guard = 0;
+        while periods.len() < n && guard < 1000 {
+            let p = *rng.pick(&PERIOD_POOL);
+            if !periods.contains(&p) {
+                periods.push(p);
+            }
+            guard += 1;
+        }
+        if periods.len() < n {
+            continue;
+        }
+
+        // WCET up to two thirds of the period, so total load ranges from light
+        // to over one and both schedulable and unschedulable sets appear.
+        let wcets: Vec<u64> = periods
+            .iter()
+            .map(|&p| rng.range(1, (2 * p / 3).max(1)))
+            .collect();
+
+        // Rate-monotonic priorities: shorter period gets the higher number, all
+        // distinct because the periods are distinct.
+        let mut order: Vec<usize> = (0..n).collect();
+        order.sort_by_key(|&i| periods[i]);
+        let mut priority = vec![0u8; n];
+        for (rank, &i) in order.iter().rev().enumerate() {
+            priority[i] = (rank as u8) + 1;
+        }
+
+        return (0..n)
+            .map(|i| {
+                Task::new(i, format!("t{i}"), priority[i])
+                    .periodic(periods[i], vec![Op::Compute(wcets[i])])
+            })
+            .collect();
+    }
+}
+
 /// The demo scenario: a blinky LED task, a chatty UART task, two periodic tasks
 /// that share a mutex, and a high-priority sensor task that preempts. Returns a
 /// kernel ready to run.
