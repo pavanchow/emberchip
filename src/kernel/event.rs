@@ -3,7 +3,7 @@
 //! value with `Eq`, two runs with the same seed and task set can be compared
 //! for exact equality, which is how the determinism gate is checked.
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Event {
     /// A new tick began at this time.
     Tick(u64),

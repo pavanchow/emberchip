@@ -46,7 +46,7 @@ impl Default for Config {
 }
 
 /// One snapshot of a ready task at a scheduling decision.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Hash)]
 pub struct ReadyEntry {
     pub id: usize,
     pub base: Priority,
@@ -55,7 +55,7 @@ pub struct ReadyEntry {
 
 /// What the scheduler saw and decided on a single tick. Kept so tests can check
 /// the scheduling invariant independently of the scheduler's own logic.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub struct TickRecord {
     pub tick: u64,
     pub ran: Option<usize>,
