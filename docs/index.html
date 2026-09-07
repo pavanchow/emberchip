@@ -2,298 +2,209 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Emberchip RTOS Playground</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Emberchip: a deterministic RTOS simulator on an emulated MCU, in Rust</title>
+<meta name="description" content="Emberchip by Pavan Nallamothu: a deterministic RTOS simulator on a small emulated microcontroller, written in pure Rust std. It models a preemptive fixed-priority scheduler, mutexes with priority inheritance, semaphores, queues, and memory-mapped peripherals. Pick a scenario and watch priority inheritance defeat priority inversion, live.">
+<meta name="author" content="Pavan Nallamothu (pavanchow)">
+<link rel="canonical" href="https://pavanchow.github.io/emberchip/">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="author" href="https://github.com/pavanchow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Emberchip: a deterministic RTOS simulator on an emulated MCU, in Rust">
+<meta property="og:description" content="A deterministic RTOS simulator: preemptive fixed-priority scheduling, priority inheritance, mutexes, semaphores, queues, and an emulated MCU with a GPIO LED and UART. By Pavan Nallamothu.">
+<meta property="og:url" content="https://pavanchow.github.io/emberchip/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Emberchip: a deterministic RTOS simulator on an emulated MCU, in Rust">
+<meta name="twitter:description" content="Watch a preemptive scheduler run and priority inheritance defeat priority inversion, tick by tick. A deterministic RTOS you can read end to end.">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Emberchip","applicationCategory":"DeveloperApplication","operatingSystem":"Cross-platform","description":"Emberchip is a deterministic RTOS simulator on a small emulated microcontroller, written in pure Rust std. It models a preemptive fixed-priority scheduler, interrupts, mutexes with priority inheritance, counting semaphores, message queues, task delays, and memory-mapped peripherals. Every run is a pure function of a seed, so its correctness gates can make hard claims and check them.","url":"https://pavanchow.github.io/emberchip/","author":{"@type":"Person","name":"Pavan Nallamothu"},"programmingLanguage":"Rust","codeRepository":"https://github.com/pavanchow/emberchip","license":"https://opensource.org/licenses/MIT"}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Person","name":"Pavan Nallamothu","alternateName":"pavanchow","url":"https://github.com/pavanchow","sameAs":["https://github.com/pavanchow","https://hackerone.com/pavanchow"]}
+</script>
 <style>
-  :root {
-    --bg: #fbfbfd;
-    --surface: #ffffff;
-    --surface-2: #f5f5f7;
-    --text: #1d1d1f;
-    --muted: #6e6e73;
-    --accent: #0071e3;
-    --border: #d2d2d7;
-    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
-    --run: #0071e3;
-    --ready: rgba(0,113,227,.16);
-    --blocked: #ff9f0a;
-    --led-off: #3a3a3c;
-    --led-on: #ff453a;
-    --led-glow: rgba(255,69,58,.65);
-    --t0: #0071e3;
-    --t1: #34c759;
-    --t2: #ff9f0a;
-    --t3: #af52de;
-    --t4: #ff2d55;
-    --t5: #5ac8fa;
-    --radius: 14px;
-    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  :root{
+    --accent:#d1430c;--accent2:#ff8a3d;--accent-soft:#fdeee2;
+    --ink:#1d1d1f;--muted:#6e6e73;--faint:#6e6e73;
+    --line:#d2d2d7;--panel:#f5f5f7;--panel2:#ffffff;--ok:#1a7f37;--err:#b3261e;
+    --mono:ui-monospace,SFMono-Regular,Menlo,"SF Mono",Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    /* component aliases used by the playground */
+    --bg:#fbfbfd;--surface:#ffffff;--surface-2:#f5f5f7;--text:#1d1d1f;--border:#d2d2d7;
+    --shadow:0 1px 3px rgba(0,0,0,.08),0 8px 24px rgba(0,0,0,.06);
+    --run:#d1430c;--ready:rgba(209,67,12,.16);--blocked:#ff9f0a;
+    --led-off:#3a3a3c;--led-on:#ff453a;--led-glow:rgba(255,69,58,.65);
+    --t0:#d1430c;--t1:#34c759;--t2:#ff9f0a;--t3:#af52de;--t4:#ff2d55;--t5:#0a84ff;
+    --radius:14px;
   }
-
-  * { box-sizing: border-box; }
-
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  /* Dark override. Must come AFTER the base body rule and re-declare BOTH the
-     variables AND the body background, or dark Chrome shows dark text on white. */
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #000000;
-      --surface: #1c1c1e;
-      --surface-2: #2c2c2e;
-      --text: #f5f5f7;
-      --muted: #98989d;
-      --accent: #0a84ff;
-      --border: #38383a;
-      --shadow: 0 1px 3px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.4);
-      --run: #0a84ff;
-      --ready: rgba(10,132,255,.22);
-      --blocked: #ff9f0a;
-      --led-off: #48484a;
-      --t0: #0a84ff;
-      --t1: #30d158;
-      --t2: #ff9f0a;
-      --t3: #bf5af2;
-      --t4: #ff375f;
-      --t5: #64d2ff;
+  @media(prefers-color-scheme:dark){
+    :root{
+      --accent:#ff9f4a;--accent2:#ffb877;--accent-soft:#2a1608;
+      --ink:#f5f5f7;--muted:#98989d;--faint:#98989d;
+      --line:#38383a;--panel:#151517;--panel2:#1c1c1e;--ok:#4ac26b;--err:#ff6b60;
+      --bg:#000000;--surface:#1c1c1e;--surface-2:#2c2c2e;--text:#f5f5f7;--border:#38383a;
+      --shadow:0 1px 3px rgba(0,0,0,.5),0 8px 24px rgba(0,0,0,.4);
+      --run:#ff9f4a;--ready:rgba(255,159,74,.22);--blocked:#ff9f0a;
+      --led-off:#48484a;
+      --t0:#ff9f4a;--t1:#30d158;--t2:#ff9f0a;--t3:#bf5af2;--t4:#ff375f;--t5:#64d2ff;
     }
-    body { background: var(--bg); color: var(--text); }
   }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:#fff;color:var(--ink);font:17px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+  @media(prefers-color-scheme:dark){body{background:#000}}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 28px}
+  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.92em;background:var(--panel);border-radius:4px;padding:.1em .4em}
 
-  header {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 56px 24px 8px;
-    text-align: center;
-  }
-  .howto > details > summary {
-    cursor: pointer;
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -.01em;
-    list-style: none;
-    padding: 2px 0;
-  }
-  .howto > details > summary::-webkit-details-marker { display: none; }
-  .howto > details > summary::before {
-    content: "\25B8";
-    display: inline-block;
-    margin-right: 10px;
-    color: var(--accent);
-    font-size: 15px;
-    transition: transform .15s;
-  }
-  .howto > details[open] > summary::before { transform: rotate(90deg); }
-  header h1 {
-    font-size: clamp(32px, 5vw, 52px);
-    letter-spacing: -.02em;
-    margin: 0 0 8px;
-    font-weight: 700;
-  }
-  header p.tag {
-    font-size: clamp(16px, 2.4vw, 21px);
-    color: var(--muted);
-    margin: 0 auto;
-    max-width: 640px;
-  }
-  .honest {
-    max-width: 720px;
-    margin: 18px auto 0;
-    font-size: 14px;
-    color: var(--muted);
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px 18px;
-  }
-  .repo-link { color: var(--accent); text-decoration: none; }
-  .repo-link:hover { text-decoration: underline; }
+  nav{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.82);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid var(--line)}
+  @media(prefers-color-scheme:dark){nav{background:rgba(0,0,0,.72)}}
+  nav .row{display:flex;justify-content:space-between;align-items:center;height:56px;max-width:1040px;margin:0 auto;padding:0 28px}
+  nav .brand{display:flex;align-items:center;gap:9px;font-size:18px;font-weight:650;letter-spacing:-.01em}
+  nav .brand .gem{width:16px;height:16px;border-radius:4px;background:radial-gradient(circle at 50% 45%,#ffd27a,#ff8a3d 55%,#e5451f)}
+  nav .links{display:flex;gap:26px;align-items:center}
+  nav .links a{color:var(--ink);font-size:14.5px}
+  @media(max-width:640px){nav .links a:not(.gh){display:none}}
 
-  main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .hero{padding:80px 0 30px;text-align:center}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+  h1{font-size:clamp(40px,7vw,66px);line-height:1.05;letter-spacing:-.035em;font-weight:680;margin:18px 0 0;text-wrap:balance}
+  .hero p.sub{max-width:680px;margin:24px auto 0;font-size:clamp(17px,2.1vw,21px);color:var(--muted)}
+  .cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:34px}
+  .btn{display:inline-block;padding:13px 26px;border-radius:999px;font-size:15px;font-weight:600;border:1px solid var(--ink);color:var(--ink)}
+  .btn:hover{opacity:.75;text-decoration:none}
+  .btn.primary{background:var(--ink);color:var(--panel2);border-color:var(--ink)}
+  @media(prefers-color-scheme:dark){.btn.primary{color:#000}}
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    padding: 22px;
-    margin: 20px 0;
-  }
-  .card h2 { margin: 0 0 4px; font-size: 22px; letter-spacing: -.01em; }
-  .card h3 { margin: 22px 0 8px; font-size: 16px; }
-  .card p.sub { margin: 0 0 16px; color: var(--muted); font-size: 15px; }
+  .howto{max-width:660px;margin:0 auto 26px;border:1px solid var(--line);border-radius:14px;padding:2px 18px;background:var(--panel)}
+  .howto>summary{cursor:pointer;font-weight:600;padding:14px 0;list-style:none}
+  .howto>summary::-webkit-details-marker{display:none}
+  .howto>summary::before{content:"\25B8";display:inline-block;margin-right:8px;color:var(--accent);transition:transform .15s}
+  .howto[open]>summary::before{transform:rotate(90deg)}
+  .howto p.sub{margin:0 0 12px;color:var(--muted);line-height:1.6}
+  .howto ul{margin:8px 0 0;padding-left:20px}
+  .howto ul li{margin:7px 0;color:var(--muted)}
+  .howto ul li b{color:var(--ink)}
+  .howto h3{font-size:15px;margin:18px 0 6px}
+  ol.tour{margin:8px 0 14px;padding-left:22px}
+  ol.tour li{margin:7px 0;color:var(--muted)}
+  ol.tour li b{color:var(--ink)}
+  .howto code{font-family:var(--mono);background:var(--panel2);border:1px solid var(--line);padding:1px 6px;border-radius:6px;font-size:13px}
+  .kbd{font-family:var(--mono);background:var(--panel2);border:1px solid var(--border);border-bottom-width:2px;border-radius:6px;padding:1px 7px;font-size:12px}
 
-  .controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    align-items: center;
-    margin-bottom: 18px;
-  }
-  button {
-    font-family: var(--sans);
-    font-size: 15px;
-    font-weight: 500;
-    padding: 9px 18px;
-    border-radius: 980px;
-    border: 1px solid transparent;
-    background: var(--accent);
-    color: #fff;
-    cursor: pointer;
-    transition: transform .06s ease, opacity .2s ease;
-  }
-  button:hover { opacity: .9; }
-  button:active { transform: scale(.97); }
-  button.secondary {
-    background: var(--surface-2);
-    color: var(--text);
-    border-color: var(--border);
-  }
-  button:disabled { opacity: .4; cursor: not-allowed; }
+  .stage{max-width:1000px;margin:36px auto 0;padding:0 20px}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:0 24px 60px -34px rgba(209,67,12,.4)}
+  .card h2{margin:0 0 4px;font-size:22px;letter-spacing:-.01em;text-align:left}
+  .card h3{margin:22px 0 8px;font-size:16px}
+  .card p.sub{margin:0 0 16px;color:var(--muted);font-size:15px}
 
-  .field { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
-  select {
-    font-family: var(--sans);
-    font-size: 14px;
-    padding: 7px 12px;
-    border-radius: 10px;
-    border: 1px solid var(--border);
-    background: var(--surface-2);
-    color: var(--text);
-  }
-  .switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
-  .switch input { width: 18px; height: 18px; accent-color: var(--accent); }
+  section{padding:84px 0;border-top:1px solid var(--line)}
+  h2{font-size:clamp(26px,4.2vw,38px);line-height:1.12;letter-spacing:-.025em;font-weight:660;text-align:center;max-width:760px;margin:0 auto}
+  .lead{max-width:680px;margin:18px auto 0;text-align:center;color:var(--muted)}
+  pre.termi{background:#15161c;color:#ececf4;border-radius:14px;padding:20px 22px;font-family:var(--mono);font-size:13px;line-height:1.6;overflow-x:auto;max-width:820px;margin:30px auto 0}
+  pre.termi .cm{color:#8a8d9a} pre.termi .g{color:#7fd6a0} pre.termi .a{color:#ff9f4a}
 
-  input[type=range] { accent-color: var(--accent); }
+  /* ===== playground component styles (unchanged behavior) ===== */
+  .controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:18px}
+  button{font-family:var(--sans);font-size:15px;font-weight:500;padding:9px 18px;border-radius:980px;border:1px solid transparent;background:var(--accent);color:#fff;cursor:pointer;transition:transform .06s ease,opacity .2s ease}
+  @media(prefers-color-scheme:dark){button{color:#000}}
+  button:hover{opacity:.9}
+  button:active{transform:scale(.97)}
+  button.secondary{background:var(--surface-2);color:var(--text);border-color:var(--border)}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .field{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+  select{font-family:var(--sans);font-size:14px;padding:7px 12px;border-radius:10px;border:1px solid var(--border);background:var(--surface-2);color:var(--text)}
+  .switch{display:inline-flex;align-items:center;gap:8px;cursor:pointer;user-select:none;font-size:14px;color:var(--muted)}
+  .switch input{width:18px;height:18px;accent-color:var(--accent)}
+  input[type=range]{accent-color:var(--accent)}
+  .readouts{display:flex;flex-wrap:wrap;gap:22px;margin:4px 0 14px;font-size:14px}
+  .readouts b{font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;padding:2px 10px;border-radius:980px;font-size:12px;font-weight:600;background:var(--surface-2);border:1px solid var(--border)}
+  .pill.good{color:var(--t1)}
+  .pill.warn{color:var(--blocked)}
+  .gantt-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--surface-2)}
+  .gantt{display:inline-block;min-width:100%;padding:10px 12px}
+  .grow{display:grid;grid-template-columns:120px 1fr;align-items:center;gap:10px;margin:3px 0}
+  .glabel{font-size:13px;font-weight:600;display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .swatch{width:11px;height:11px;border-radius:3px;flex:none}
+  .gcells{display:flex;gap:2px}
+  .cell{width:15px;height:22px;border-radius:3px;background:transparent;flex:none;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff}
+  .cell.ready{background:var(--ready)}
+  .cell.blocked{background:var(--blocked);opacity:.55}
+  .cell.run{color:#fff}
+  .axis{display:grid;grid-template-columns:120px 1fr;gap:10px;margin-bottom:2px}
+  .axis .ticks{display:flex;gap:2px}
+  .axis .tk{width:15px;font-size:9px;color:var(--muted);text-align:center;flex:none}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend .box{width:13px;height:13px;border-radius:3px}
+  .board-row{display:grid;grid-template-columns:220px 1fr;gap:18px;margin-top:16px}
+  @media(max-width:720px){.board-row{grid-template-columns:1fr}}
+  .board{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center}
+  .chip{margin:8px auto 12px;width:150px;height:96px;background:linear-gradient(145deg,#2c2c2e,#101012);border-radius:10px;position:relative;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 2px #000,var(--shadow)}
+  .chip .name{color:#8e8e93;font-family:var(--mono);font-size:11px;letter-spacing:.12em}
+  .chip::before,.chip::after{content:"";position:absolute;top:12px;bottom:12px;width:6px;background:repeating-linear-gradient(#5a5a5e,#5a5a5e 6px,transparent 6px,transparent 12px)}
+  .chip::before{left:-6px}
+  .chip::after{right:-6px}
+  .led{width:26px;height:26px;border-radius:50%;background:var(--led-off);margin:4px auto;transition:background .08s ease,box-shadow .08s ease}
+  .led.on{background:var(--led-on);box-shadow:0 0 4px 2px var(--led-glow),0 0 14px 6px var(--led-glow)}
+  .led-label{font-size:12px;color:var(--muted)}
+  .console{background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:0;overflow:hidden}
+  .console .bar{padding:8px 14px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface)}
+  .console pre{margin:0;padding:12px 14px;font-family:var(--mono);font-size:12.5px;line-height:1.55;height:190px;overflow-y:auto;white-space:pre-wrap;color:var(--text)}
+  .log .ev-inherit{color:var(--t3);font-weight:600}
+  .log .ev-preempt{color:var(--blocked);font-weight:600}
+  .log .ev-block{color:var(--t4)}
+  .log .ev-lock{color:var(--t1)}
+  .log .ev-muted{color:var(--muted)}
 
-  .readouts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 22px;
-    margin: 4px 0 14px;
-    font-size: 14px;
-  }
-  .readouts b { font-variant-numeric: tabular-nums; }
-  .pill {
-    display: inline-block;
-    padding: 2px 10px;
-    border-radius: 980px;
-    font-size: 12px;
-    font-weight: 600;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-  }
-  .pill.good { color: var(--t1); }
-  .pill.warn { color: var(--blocked); }
-
-  /* Gantt */
-  .gantt-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
-  .gantt { display: inline-block; min-width: 100%; padding: 10px 12px; }
-  .grow { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 10px; margin: 3px 0; }
-  .glabel { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
-  .swatch { width: 11px; height: 11px; border-radius: 3px; flex: none; }
-  .gcells { display: flex; gap: 2px; }
-  .cell {
-    width: 15px; height: 22px; border-radius: 3px;
-    background: transparent; flex: none;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 9px; color: #fff;
-  }
-  .cell.ready { background: var(--ready); }
-  .cell.blocked { background: var(--blocked); opacity: .55; }
-  .cell.run { color: #fff; }
-  .axis { display: grid; grid-template-columns: 120px 1fr; gap: 10px; margin-bottom: 2px; }
-  .axis .ticks { display: flex; gap: 2px; }
-  .axis .tk { width: 15px; font-size: 9px; color: var(--muted); text-align: center; flex: none; }
-  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: var(--muted); }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .legend .box { width: 13px; height: 13px; border-radius: 3px; }
-
-  /* Board */
-  .board-row { display: grid; grid-template-columns: 220px 1fr; gap: 18px; margin-top: 16px; }
-  @media (max-width: 720px) { .board-row { grid-template-columns: 1fr; } }
-  .board {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px;
-    text-align: center;
-  }
-  .chip {
-    margin: 8px auto 12px;
-    width: 150px; height: 96px;
-    background: linear-gradient(145deg, #2c2c2e, #101012);
-    border-radius: 10px;
-    position: relative;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: inset 0 0 0 2px #000, var(--shadow);
-  }
-  .chip .name { color: #8e8e93; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; }
-  .chip::before, .chip::after {
-    content: ""; position: absolute; top: 12px; bottom: 12px; width: 6px;
-    background: repeating-linear-gradient(#5a5a5e, #5a5a5e 6px, transparent 6px, transparent 12px);
-  }
-  .chip::before { left: -6px; }
-  .chip::after { right: -6px; }
-  .led {
-    width: 26px; height: 26px; border-radius: 50%;
-    background: var(--led-off);
-    margin: 4px auto;
-    transition: background .08s ease, box-shadow .08s ease;
-  }
-  .led.on { background: var(--led-on); box-shadow: 0 0 4px 2px var(--led-glow), 0 0 14px 6px var(--led-glow); }
-  .led-label { font-size: 12px; color: var(--muted); }
-
-  .console {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 0;
-    overflow: hidden;
-  }
-  .console .bar { padding: 8px 14px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--border); background: var(--surface); }
-  .console pre {
-    margin: 0; padding: 12px 14px;
-    font-family: var(--mono); font-size: 12.5px; line-height: 1.55;
-    height: 190px; overflow-y: auto; white-space: pre-wrap;
-    color: var(--text);
-  }
-  .log .ev-inherit { color: var(--t3); font-weight: 600; }
-  .log .ev-preempt { color: var(--blocked); font-weight: 600; }
-  .log .ev-block { color: var(--t4); }
-  .log .ev-lock { color: var(--t1); }
-  .log .ev-muted { color: var(--muted); }
-
-  ol.tour { margin: 8px 0 0; padding-left: 22px; }
-  ol.tour li { margin: 7px 0; }
-  .howto code { font-family: var(--mono); background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-size: 13px; }
-  .kbd { font-family: var(--mono); background: var(--surface-2); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: 12px; }
-
-  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 24px 60px; }
+  footer{padding:60px 0;border-top:1px solid var(--line);text-align:center;color:var(--muted)}
+  footer .name{color:var(--ink);font-weight:600}footer p+p{margin-top:10px}
+  @media(max-width:640px){.hero{padding:56px 0 24px}section{padding:60px 0}.card{padding:16px}}
 </style>
 </head>
 <body>
-<header>
-  <img src="logo.svg" alt="Emberchip logo" width="72" height="72">
-  <h1>Emberchip</h1>
-  <p class="tag">A deterministic RTOS, running in your browser. Watch a preemptive fixed-priority scheduler, a blinking LED, and priority inheritance defeat priority inversion.</p>
-  <div class="honest">
-    Honest framing: a real embedded OS runs as firmware on a microcontroller. This is a teaching-accurate simulator of one, reimplemented in plain JavaScript to mirror the Rust engine. It models the mechanisms, it is not firmware for a real chip.
-    <br>Source and the full engine: <a class="repo-link" href="https://github.com/pavanchow/emberchip">github.com/pavanchow/emberchip</a>
-  </div>
-</header>
+<noscript><div class="wrap" style="padding:40px 28px;color:#6a6d78">Emberchip is a deterministic RTOS simulator on a small emulated microcontroller, written in pure Rust std by Pavan Nallamothu. It models a preemptive fixed-priority scheduler, mutexes with priority inheritance, semaphores, message queues, and memory-mapped peripherals. Source: <a href="https://github.com/pavanchow/emberchip">github.com/pavanchow/emberchip</a>.</div></noscript>
 
-<main>
-  <section class="card">
+<nav><div class="row">
+  <div class="brand"><span class="gem"></span>Emberchip</div>
+  <div class="links"><a href="#sim">Scheduler</a><a href="#proof">Proof</a><a href="#use">Use it</a><a class="gh" href="https://github.com/pavanchow/emberchip">GitHub</a></div>
+</div></nav>
+
+<div class="hero">
+  <img src="logo.svg" alt="Emberchip logo" width="72" height="72">
+  <p class="eyebrow">Rust · deterministic RTOS simulator</p>
+  <h1>Watch priority inversion,<br>then watch it lose.</h1>
+  <p class="sub">Emberchip is a deterministic RTOS simulator on a small emulated microcontroller, written in pure Rust std. It models a preemptive fixed-priority scheduler, mutexes with priority inheritance, semaphores, queues, and memory-mapped peripherals, a GPIO LED, a UART, and a timer. Every run is a pure function of a seed, so its correctness gates make hard claims and check them. Pick a scenario and step it tick by tick.</p>
+  <div class="cta-row">
+    <a class="btn primary" href="#sim">Open the scheduler</a>
+    <a class="btn" href="https://github.com/pavanchow/emberchip">View on GitHub</a>
+  </div>
+</div>
+
+<details class="howto">
+  <summary>How to use this playground</summary>
+  <p class="sub">Every control, and what to look for.</p>
+  <ul>
+    <li><b>Scenario</b>: choose the task set. <i>Blinky</i> is a lively schedulable set with a blinking LED and UART chatter. <i>Priority inversion</i> is the classic three-task trap for watching priority inheritance.</li>
+    <li><b>Priority inheritance</b>: turns the mechanism on or off. It matters most in the inversion scenario. Toggling it resets the run.</li>
+    <li><b>Step</b> <span class="kbd">S</span>: advance exactly one tick. Best for watching the mechanism closely.</li>
+    <li><b>Run / Pause</b> <span class="kbd">Space</span>: play continuously at the chosen speed.</li>
+    <li><b>Reset</b> <span class="kbd">R</span>: rebuild the current scenario from tick zero.</li>
+    <li><b>Speed</b>: how many ticks per second when running.</li>
+  </ul>
+  <h3>Guided tour</h3>
+  <ol class="tour">
+    <li>Leave the scenario on <b>Priority inversion</b> with <b>inheritance on</b>. Press <b>Run</b>.</li>
+    <li>Watch <b>low</b> take the mutex (green <b>L</b>), then <b>high</b> arrive and block (amber cell, and a red BLOCK line in the log).</li>
+    <li>See the purple <b>INHERIT</b> line: low is boosted to high's priority, so <b>medium</b> cannot steal the CPU. Low finishes its short critical section and hands the mutex straight to high.</li>
+    <li>Note the <b>high blocked</b> readout. It is small, bounded by the critical section.</li>
+    <li>Now turn <b>inheritance off</b> and press Run again. This time <b>medium</b> preempts low while high waits, and the <b>high blocked</b> readout balloons. That is unbounded priority inversion.</li>
+    <li>Switch to <b>Blinky</b> and Run. Watch the LED toggle from the GPIO task, UART text stream, and higher-priority tasks preempt the workers, all with zero deadline misses.</li>
+  </ol>
+</details>
+
+<div class="stage" id="sim"><div class="card">
     <h2>Live scheduler</h2>
     <p class="sub">Pick a scenario, then step tick by tick or let it run. The Gantt shows which task holds the CPU each tick, who is merely ready, and who is blocked.</p>
 
@@ -354,38 +265,39 @@
       <div class="bar">kernel events</div>
       <pre id="log"></pre>
     </div>
-  </section>
+</div></div>
 
-  <section class="card howto">
-    <details>
-    <summary>How to use this playground</summary>
-    <p class="sub">Every control, and what to look for.</p>
-    <ul>
-      <li><b>Scenario</b>: choose the task set. <i>Blinky</i> is a lively schedulable set with a blinking LED and UART chatter. <i>Priority inversion</i> is the classic three-task trap for watching priority inheritance.</li>
-      <li><b>Priority inheritance</b>: turns the mechanism on or off. It matters most in the inversion scenario. Toggling it resets the run.</li>
-      <li><b>Step</b> <span class="kbd">S</span>: advance exactly one tick. Best for watching the mechanism closely.</li>
-      <li><b>Run / Pause</b> <span class="kbd">Space</span>: play continuously at the chosen speed.</li>
-      <li><b>Reset</b> <span class="kbd">R</span>: rebuild the current scenario from tick zero.</li>
-      <li><b>Speed</b>: how many ticks per second when running.</li>
-    </ul>
+<section id="proof"><div class="wrap">
+  <h2>It is proven, not asserted</h2>
+  <p class="lead">Because every run is a pure function of a seed and a task set, the correctness gates can make hard claims and check them. They are committed as tests and run in CI on every push. Every gate asserts the contention it depends on actually happened, so none can pass vacuously.</p>
+  <pre class="termi"><span class="cm"># the four correctness gates (cargo test)</span>
+<span class="a">tests/preemption.rs</span>            the task that ran had the highest ready priority, every tick
+<span class="a">tests/priority_inheritance.rs</span>  <span class="g">on:</span> high blocked no longer than the critical section
+                               <span class="g">off:</span> medium stretches the blocking well past it
+<span class="a">tests/synchronization.rs</span>       mutual exclusion, no lost or duplicated signals,
+                               and a byte-identical event timeline across runs
+<span class="a">tests/schedulability.rs</span>        response-time analysis matches the simulated run</pre>
+  <p class="lead" style="margin-top:26px">The inversion contrast you can trigger above is the same one gate 2 proves: with inheritance the high task is bounded by the low task's short critical section, and with it off the medium task pushes the blocking well beyond. Same seed, same task set, byte-identical timeline, every time.</p>
+</div></section>
 
-    <h3>Guided tour</h3>
-    <ol class="tour">
-      <li>Leave the scenario on <b>Priority inversion</b> with <b>inheritance on</b>. Press <b>Run</b>.</li>
-      <li>Watch <b>low</b> take the mutex (green <b>L</b>), then <b>high</b> arrive and block (amber cell, and a red BLOCK line in the log).</li>
-      <li>See the purple <b>INHERIT</b> line: low is boosted to high's priority, so <b>medium</b> cannot steal the CPU. Low finishes its short critical section and hands the mutex straight to high.</li>
-      <li>Note the <b>high blocked</b> readout. It is small, bounded by the critical section.</li>
-      <li>Now turn <b>inheritance off</b> and press Run again. This time <b>medium</b> preempts low while high waits, and the <b>high blocked</b> readout balloons. That is unbounded priority inversion.</li>
-      <li>Switch to <b>Blinky</b> and Run. Watch the LED toggle from the GPIO task, UART text stream, and higher-priority tasks preempt the workers, all with zero deadline misses.</li>
-    </ol>
-    </details>
-  </section>
+<section id="use"><div class="wrap">
+  <h2>Use it</h2>
+  <pre class="termi"><span class="cm"># the whole thing is pure Rust std, so it builds and runs anywhere</span>
+cargo run -- demo                <span class="cm"># blinky, sensor, two workers sharing a mutex</span>
+cargo run -- run 300 --seed 7    <span class="cm"># a random schedulable set, zero misses</span>
+cargo run -- inversion on        <span class="cm"># priority inheritance bounds the blocking</span>
+cargo run -- inversion off       <span class="cm"># unbounded inversion appears</span>
+cargo run -- analyze --seed 7    <span class="cm"># response-time analysis vs the simulated run</span>
 
-  <footer>
-    Emberchip is a teaching-accurate RTOS simulator. Built in pure Rust std, with this browser twin in plain JavaScript.<br>
-    <a class="repo-link" href="https://github.com/pavanchow/emberchip">github.com/pavanchow/emberchip</a>
-  </footer>
-</main>
+<span class="cm"># the correctness gates, widen the fuzzed runs with an env knob</span>
+cargo test
+EMBERCHIP_FUZZ_OPS=2000 cargo test</pre>
+</div></section>
+
+<footer><div class="wrap">
+  <p>Emberchip is MIT licensed. Source, tests, and the design notes are on <a href="https://github.com/pavanchow/emberchip">GitHub</a>.</p>
+  <p>By <span class="name">Pavan Nallamothu</span>.</p>
+</div></footer>
 
 <script>
 "use strict";
