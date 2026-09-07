@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Emberchip logo">
+  <defs>
+    <linearGradient id="ec-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1d2530"/>
+      <stop offset="1" stop-color="#0b0f16"/>
+    </linearGradient>
+    <radialGradient id="ec-ember" cx="50%" cy="50%" r="60%">
+      <stop offset="0" stop-color="#ffd27a"/>
+      <stop offset="55%" stop-color="#ff8a3d"/>
+      <stop offset="100%" stop-color="#e5451f"/>
+    </radialGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="26" fill="url(#ec-bg)"/>
+  <!-- chip pins -->
+  <g fill="#f5a623">
+    <rect x="30" y="18" width="8" height="12" rx="2"/><rect x="60" y="18" width="8" height="12" rx="2"/><rect x="90" y="18" width="8" height="12" rx="2"/>
+    <rect x="30" y="98" width="8" height="12" rx="2"/><rect x="60" y="98" width="8" height="12" rx="2"/><rect x="90" y="98" width="8" height="12" rx="2"/>
+    <rect x="18" y="30" width="12" height="8" rx="2"/><rect x="18" y="60" width="12" height="8" rx="2"/><rect x="18" y="90" width="12" height="8" rx="2"/>
+    <rect x="98" y="30" width="12" height="8" rx="2"/><rect x="98" y="60" width="12" height="8" rx="2"/><rect x="98" y="90" width="12" height="8" rx="2"/>
+  </g>
+  <!-- chip die -->
+  <rect x="30" y="30" width="68" height="68" rx="12" fill="#11161f" stroke="#f5a623" stroke-width="3"/>
+  <!-- the ember at the core -->
+  <circle cx="64" cy="64" r="20" fill="url(#ec-ember)"/>
+</svg>

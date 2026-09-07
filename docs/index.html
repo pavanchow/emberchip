@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Emberchip RTOS Playground</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <style>
   :root {
     --bg: #fbfbfd;
@@ -74,6 +75,24 @@
     padding: 56px 24px 8px;
     text-align: center;
   }
+  .howto > details > summary {
+    cursor: pointer;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -.01em;
+    list-style: none;
+    padding: 2px 0;
+  }
+  .howto > details > summary::-webkit-details-marker { display: none; }
+  .howto > details > summary::before {
+    content: "\25B8";
+    display: inline-block;
+    margin-right: 10px;
+    color: var(--accent);
+    font-size: 15px;
+    transition: transform .15s;
+  }
+  .howto > details[open] > summary::before { transform: rotate(90deg); }
   header h1 {
     font-size: clamp(32px, 5vw, 52px);
     letter-spacing: -.02em;
@@ -264,6 +283,7 @@
 </head>
 <body>
 <header>
+  <img src="logo.svg" alt="Emberchip logo" width="72" height="72">
   <h1>Emberchip</h1>
   <p class="tag">A deterministic RTOS, running in your browser. Watch a preemptive fixed-priority scheduler, a blinking LED, and priority inheritance defeat priority inversion.</p>
   <div class="honest">
@@ -337,7 +357,8 @@
   </section>
 
   <section class="card howto">
-    <h2>How to use this playground</h2>
+    <details>
+    <summary>How to use this playground</summary>
     <p class="sub">Every control, and what to look for.</p>
     <ul>
       <li><b>Scenario</b>: choose the task set. <i>Blinky</i> is a lively schedulable set with a blinking LED and UART chatter. <i>Priority inversion</i> is the classic three-task trap for watching priority inheritance.</li>
@@ -357,6 +378,7 @@
       <li>Now turn <b>inheritance off</b> and press Run again. This time <b>medium</b> preempts low while high waits, and the <b>high blocked</b> readout balloons. That is unbounded priority inversion.</li>
       <li>Switch to <b>Blinky</b> and Run. Watch the LED toggle from the GPIO task, UART text stream, and higher-priority tasks preempt the workers, all with zero deadline misses.</li>
     </ol>
+    </details>
   </section>
 
   <footer>

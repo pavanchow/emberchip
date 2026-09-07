@@ -1,5 +1,7 @@
 # Emberchip
 
+<img src="docs/logo.svg" alt="Emberchip logo" width="96">
+
 A deterministic RTOS simulator on a small emulated microcontroller, written in pure Rust std.
 
 Live playground: https://pavanchow.github.io/emberchip/
