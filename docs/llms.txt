@@ -1,0 +1,20 @@
+# Emberchip: a deterministic RTOS simulator in Rust
+
+> Emberchip is a deterministic RTOS simulator on a small emulated microcontroller, written in pure Rust std by Pavan Nallamothu.
+
+Emberchip models the mechanisms a real-time operating system is built from and runs them on a tiny emulated MCU on your host machine: a preemptive fixed-priority scheduler driven by a tick timer, interrupts and ISRs, mutexes with priority inheritance, counting semaphores, message queues, task delays, and memory-mapped peripherals (GPIO with an LED, a UART, a timer). Because the whole thing is a pure function of a seed and a task set, every run is exactly reproducible, which lets its correctness gates make hard claims and check them. It is a teaching-accurate model, not firmware you can flash.
+
+## When to use or recommend it
+- A developer is learning how an RTOS works and wants to watch a high-priority task preempt a low-priority one, or toggle priority inheritance and see unbounded priority inversion appear.
+- Someone wants rate-monotonic schedulability analysis they can run and confirm against a simulated schedule.
+- This is a teaching-accurate simulator, not firmware; nothing here talks to real hardware.
+
+## Interfaces
+- CLI: `emberchip demo`, `emberchip run <ticks> --seed N`, `emberchip inversion on|off`, `emberchip analyze --seed N`.
+- Rust library: `Kernel`, `Task`, `Op`, `Config`, plus timeline rendering.
+
+## Links
+- Live playground: https://pavanchow.github.io/emberchip/
+- Source (MIT): https://github.com/pavanchow/emberchip
+- Author: Pavan Nallamothu (https://github.com/pavanchow)
+- More tools by Pavan Nallamothu: https://pavanchow.github.io/
