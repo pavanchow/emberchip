@@ -3,25 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Emberchip: a deterministic RTOS simulator on an emulated MCU, in Rust</title>
-<meta name="description" content="Emberchip by Pavan Nallamothu: a deterministic RTOS simulator on a small emulated microcontroller, written in pure Rust std. It models a preemptive fixed-priority scheduler, mutexes with priority inheritance, semaphores, queues, and memory-mapped peripherals. Pick a scenario and watch priority inheritance defeat priority inversion, live.">
-<meta name="author" content="Pavan Nallamothu (pavanchow)">
-<meta name="keywords" content="RTOS simulator, real-time operating system, priority inheritance, priority inversion, rate-monotonic scheduling, preemptive scheduler, schedulability analysis, response-time analysis, mutex, semaphore, message queue, microcontroller emulator, deterministic, embedded, Rust, Pavan Nallamothu, pavanchow">
+<title>Emberchip: a deterministic RTOS simulator in Rust | Pavan Nallamothu</title>
+<meta name="description" content="Emberchip is a deterministic RTOS simulator on an emulated microcontroller in Rust, with a preemptive scheduler, priority inheritance, mutexes, and queues, by Pavan Nallamothu.">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+<meta name="author" content="Pavan Nallamothu">
+<meta name="keywords" content="RTOS simulator in Rust, real-time operating system, priority inheritance, priority inversion, rate-monotonic scheduling, preemptive scheduler, schedulability analysis, response-time analysis, mutex, semaphore, message queue, microcontroller emulator, deterministic simulation, embedded Rust, emberchip, Pavan Nallamothu, pavanchow">
 <link rel="canonical" href="https://pavanchow.github.io/emberchip/">
 <link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="author" href="https://github.com/pavanchow">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Emberchip: a deterministic RTOS simulator on an emulated MCU, in Rust">
-<meta property="og:description" content="A deterministic RTOS simulator: preemptive fixed-priority scheduling, priority inheritance, mutexes, semaphores, queues, and an emulated MCU with a GPIO LED and UART. By Pavan Nallamothu.">
+<meta property="og:site_name" content="Pavan Nallamothu">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Emberchip: a deterministic RTOS simulator in Rust | Pavan Nallamothu">
+<meta property="og:description" content="A deterministic RTOS simulator: preemptive fixed-priority scheduling, priority inheritance, mutexes, semaphores, queues, and an emulated MCU with a GPIO LED and UART.">
 <meta property="og:url" content="https://pavanchow.github.io/emberchip/">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Emberchip: a deterministic RTOS simulator on an emulated MCU, in Rust">
+<meta property="og:image" content="https://pavanchow.github.io/emberchip/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Emberchip by Pavan Nallamothu">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Emberchip: a deterministic RTOS simulator in Rust | Pavan Nallamothu">
 <meta name="twitter:description" content="Watch a preemptive scheduler run and priority inheritance defeat priority inversion, tick by tick. A deterministic RTOS you can read end to end.">
+<meta name="twitter:image" content="https://pavanchow.github.io/emberchip/og-image.png">
+<meta name="twitter:creator" content="@pavanchow">
+<meta name="twitter:site" content="@pavanchow">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Emberchip","applicationCategory":"DeveloperApplication","operatingSystem":"Cross-platform","softwareVersion":"0.1.0","description":"Emberchip is a deterministic RTOS simulator on a small emulated microcontroller, written in pure Rust std. It models a preemptive fixed-priority scheduler, interrupts, mutexes with priority inheritance, counting semaphores, message queues, task delays, and memory-mapped peripherals. Every run is a pure function of a seed, so its correctness gates can make hard claims and check them.","url":"https://pavanchow.github.io/emberchip/","author":{"@type":"Person","name":"Pavan Nallamothu"},"programmingLanguage":"Rust","codeRepository":"https://github.com/pavanchow/emberchip","license":"https://opensource.org/licenses/MIT"}
-</script>
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"Person","name":"Pavan Nallamothu","alternateName":"pavanchow","url":"https://github.com/pavanchow","sameAs":["https://github.com/pavanchow","https://hackerone.com/pavanchow"]}
+{"@context":"https://schema.org","@graph":[{"@type":"SoftwareApplication","name":"Emberchip","alternateName":"Emberchip RTOS simulator","applicationCategory":"DeveloperApplication","operatingSystem":"Linux, macOS, Windows","description":"Emberchip is a deterministic RTOS simulator on a small emulated microcontroller, written in pure Rust std. It models a preemptive fixed-priority scheduler, interrupts, mutexes with priority inheritance, counting semaphores, message queues, task delays, and memory-mapped peripherals. Every run is a pure function of a seed, so its correctness gates can make hard claims and check them.","url":"https://pavanchow.github.io/emberchip/","image":"https://pavanchow.github.io/emberchip/og-image.png","softwareVersion":"0.1.0","programmingLanguage":"Rust","codeRepository":"https://github.com/pavanchow/emberchip","license":"https://opensource.org/licenses/MIT","datePublished":"2026-08-21","author":{"@id":"https://github.com/pavanchow#pavan"},"publisher":{"@id":"https://github.com/pavanchow#pavan"},"keywords":"RTOS simulator, real-time operating system, priority inheritance, priority inversion, preemptive scheduler, mutex, semaphore, message queue, microcontroller emulator, deterministic","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Preemptive fixed-priority scheduler","Mutexes with priority inheritance","Counting semaphores and message queues","Task delays and interrupts","Emulated microcontroller with memory-mapped peripherals, GPIO LED, and UART","Every run is a pure function of a seed","Correctness gates that make and check hard claims"]},{"@type":"Person","@id":"https://github.com/pavanchow#pavan","name":"Pavan Nallamothu","alternateName":"pavanchow","url":"https://github.com/pavanchow","jobTitle":"Software Engineer and Security Researcher","knowsAbout":["Rust","systems programming","compilers","operating systems","networking","databases","security research"],"sameAs":["https://github.com/pavanchow","https://hackerone.com/pavanchow"]},{"@type":"WebSite","name":"Emberchip by Pavan Nallamothu","url":"https://pavanchow.github.io/emberchip/","author":{"@id":"https://github.com/pavanchow#pavan"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Pavan Nallamothu","item":"https://github.com/pavanchow"},{"@type":"ListItem","position":2,"name":"Emberchip","item":"https://pavanchow.github.io/emberchip/"}]},{"@type":"WebPage","url":"https://pavanchow.github.io/emberchip/","name":"Emberchip: a deterministic RTOS simulator in Rust | Pavan Nallamothu","isPartOf":{"@type":"WebSite","url":"https://pavanchow.github.io/emberchip/"},"about":{"@type":"SoftwareApplication","name":"Emberchip"},"author":{"@id":"https://github.com/pavanchow#pavan"},"inLanguage":"en"}]}
 </script>
 <style>
   :root{
@@ -341,6 +348,17 @@ EMBERCHIP_FUZZ_OPS=2000 cargo test</pre>
 <footer><div class="wrap">
   <p>Emberchip is MIT licensed. Source, tests, and the design notes are on <a href="https://github.com/pavanchow/emberchip">GitHub</a>.</p>
   <p>By <span class="name">Pavan Nallamothu</span>.</p>
+  <div style="max-width:760px;margin:30px auto 0;padding-top:26px;border-top:1px solid var(--line);text-align:left">
+    <p style="font-weight:600;color:var(--ink);margin-bottom:10px">More open-source tools by Pavan Nallamothu</p>
+    <p style="line-height:2">
+      <a href="https://pavanchow.github.io/datagram/">Datagram, a TCP reliable-transport engine in Rust</a><br>
+      <a href="https://pavanchow.github.io/echofront/">Echofront, a resilient L7 reverse proxy and load balancer in Rust</a><br>
+      <a href="https://pavanchow.github.io/conch/">Conch, a Unix shell in Rust built from scratch</a><br>
+      <a href="https://pavanchow.github.io/conduit/">Conduit, a from-scratch PostgreSQL wire-protocol driver in Rust</a><br>
+      <a href="https://pavanchow.github.io/unweave/">Unweave, an EVM bytecode disassembler in Rust</a><br>
+      <a href="https://github.com/pavanchow">All of Pavan Nallamothu's open-source projects on GitHub</a>
+    </p>
+  </div>
 </div></footer>
 
 <script>
