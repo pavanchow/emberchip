@@ -6,6 +6,8 @@ Emberchip is a deterministic RTOS simulator in Rust, modeling a small emulated m
 
 **[Live demo](https://pavanchow.github.io/emberchip/)** · MIT licensed · pure Rust
 
+Built from scratch by [Pavan Nallamothu](https://pavanchow.github.io/) ([LinkedIn](https://www.linkedin.com/in/pavanchow/), [GitHub](https://github.com/pavanchow)).
+
 ## What this is, honestly
 
 A real embedded operating system runs as firmware on a microcontroller, a physical chip with its own CPU, memory map, and peripherals. Emberchip is not that. Emberchip is a faithful, deterministic simulator of one. It models the mechanisms a real-time operating system is built from and runs them on a tiny emulated MCU, all in ordinary Rust std on your host machine.
